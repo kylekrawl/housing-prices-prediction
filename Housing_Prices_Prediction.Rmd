@@ -27,3 +27,119 @@ library(gridExtra)
 library(ggpubr)
 library(corrplot)
 ```
+```{r}
+## Load dataset:
+
+data <- read_excel("./Data/soc20.xls")
+
+```
+
+### Data Cleaning and Exploration
+
+```{r}
+## Remove features out of scope of research:
+
+data <- data %>% 
+     select(-FINC, -COMP, -SALE, -STRT, -AUTH, -PVALU, -SLPR, -SQFS,
+            -ID, -CLOS, -WEIGHT, -AREA_F, -FNSQ_F, -FFNSQ_F, -SLPR_F,
+            -FSLPR_F, -CONPR_F, -FCONPR_F, -LOTV_F, -SQFS_F, -FSQFS_F, 
+            -PVALU_F) %>% 
+     as.data.frame()
+
+## Replace missing values with NA for consistency across features:
+
+missing_value_map <- c("ACS" = 0, "AGER" = 0, "ASSOC" = 0, "BASE" = "00",
+                       "CAT" = 0, "CON" = 0, "DECK" = 0, "DET" = 0, "DIV" = 0,
+                       "FNBS" = 0, "FOYER" = 0, "FRAME" = 0, "GAR" = 0, 
+                       "HEAT" = "00", "HEAT2" = "00", "LNDR" = 0, "MFGS" = 0, 
+                       "PATI" = 0, "PRCH" = 0, "SEWER" = 0, "STOR" = 0, 
+                       "WAL1" = "00", "WAL2" = "00", "WALS" = 0, "WATER" = 0, 
+                       "BEDR" = 0, "FPLS" = 9, "FULB" = 9, "HAFB" = 9, 
+                       "FUEL" = "00", "FUEL2" = "00", "CONPR" = 0, "FCONPR" = 0, 
+                       "FSLPR" = 0, "FSQFS" = 0, "LOTV" = 0, "FNSQ" = 0, 
+                       "FFNSQ" = 0, "AREA" = 0)
+
+map_na <- function(data, map) {
+     for (name in names(data)) { 
+          if (name %in% names(map)) {
+               data[, name] <- replace(data[, name], data[, name] == map[name], NA)
+          } else {
+               next
+          }
+     }
+     return(data)
+}
+
+data <- map_na(data, missing_value_map)
+```
+
+```{r}
+## Calculate percentage of missing values for each feature:
+
+percent_missing <- function(data) {
+     output_df <- data.frame(matrix(ncol = 2, nrow = 0))
+     colnames(output_df) = c("Variable", "Percent_Values_Missing")
+     for (name in names(data)) {
+          percent_missing <- round(sum(is.na(data[, name]))/nrow(data)*100, 2)
+          output_df[nrow(output_df)+1, ] <- c(name, percent_missing)
+     }
+     output_df$Percent_Values_Missing <- as.double(output_df$Percent_Values_Missing)
+     return(output_df)
+}
+
+data_sparsity <- percent_missing(data)
+```
+
+```{r}
+## Remove features with >70% data sparsity:
+
+data <- data %>% 
+     select(-CONPR, -FCONPR, -FUEL2, -HEAT2,
+            -FFNSQ, -FNSQ, -FNBS, -LOTV) %>%
+     as.data.frame()
+
+## Remove rows where no valid FSPLR value recorded:
+
+data <- filter(data, !is.na(data$FSLPR))
+
+## Convert categorical fields into factors:
+
+data_cat <- data %>% 
+     select(-FSLPR, -FSQFS, -AREA) %>% 
+     lapply(as.factor) %>%
+     as.data.frame()
+data <- cbind(FSLPR=data$FSLPR, FSQFS=data$FSQFS, AREA=data$AREA, data_cat)
+```
+
+```{r}
+## Impute missing values:
+
+mode_calc <- function(values) {
+     unique_values <- unique(values)[!is.na(unique(values))]
+     unique_values[which.max(tabulate(match(values, unique_values)))]
+}
+
+impute_missing <- function(data) {
+     for (name in names(data)) {
+          if (is.factor(data[, name])) {
+               data[, name][is.na(data[, name])] <- mode_calc(data[, name])
+          } else {
+               data[, name][is.na(data[, name])] <- median(data[, name], na.rm=TRUE)
+          }
+     }
+     return(data)
+}
+
+data <- impute_missing(data)
+
+sum(is.na(data))
+summary(data)
+```
+
+```{r}
+### Remove columns with no variability:
+
+data <- data %>% 
+     select(-CAT) %>%
+     as.data.frame()
+```
