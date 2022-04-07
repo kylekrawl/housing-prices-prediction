@@ -1,0 +1,29 @@
+---
+title: "Housing Prices Prediction"
+author: "Kyle Krawl"
+date: "4/7/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+env_dir = paste(getwd(), "./housing-prices-prediction", sep = "")
+knitr::opts_knit$set(root.dir = env_dir)
+```
+
+### Environment Setup and Data Import
+
+```{r}
+## Load libraries used in analysis:
+
+# Data import and manipulation:
+library(readxl)
+library(dplyr)
+
+# Visualizations:
+library(ggplot2)
+library(grid)
+library(gridExtra)
+library(ggpubr)
+library(corrplot)
+```
