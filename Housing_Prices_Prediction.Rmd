@@ -26,7 +26,12 @@ library(grid)
 library(gridExtra)
 library(ggpubr)
 library(corrplot)
+
+# Factor analysis of mixed data:
+library(FactoMineR)
+library(factoextra)
 ```
+
 ```{r}
 ## Load dataset:
 
@@ -135,11 +140,135 @@ data <- impute_missing(data)
 sum(is.na(data))
 summary(data)
 ```
-
 ```{r}
-### Remove columns with no variability:
+## Remove columns with no variability:
 
 data <- data %>% 
      select(-CAT) %>%
      as.data.frame()
+
+```
+
+```{r}
+## Bar charts of categorical variables:
+
+is_factor <- sapply(data, is.factor)
+data_cat <- data[, is_factor]
+
+generate_bar_charts <- function(df) {
+  plot_list <- vector('list', length(df))
+  name_list <- names(df)
+  
+  for (i in seq_along(df)) {
+    df.x <- df[[name_list[i]]]
+    plot_list[[i]] <- ggplot(data = df, aes(y = .data[[name_list[i]]])) + 
+      geom_bar(color = "white")
+  }
+  return(plot_list)
+}
+
+bar_charts <- generate_bar_charts(data_cat)
+
+grid.arrange(grobs = bar_charts[1:4], ncol = 2, 
+             top=textGrob("Bar Charts of Housing Variables (1 of 7)"))
+grid.arrange(grobs = bar_charts[5:8], ncol = 2, 
+             top=textGrob("Bar Charts of Housing Variables (2 of 7)"))
+grid.arrange(grobs = bar_charts[9:12], ncol = 2, 
+             top=textGrob("Bar Charts of Housing Variables (3 of 7)"))
+grid.arrange(grobs = bar_charts[13:16], ncol = 2, 
+             top=textGrob("Bar Charts of Housing Variables (4 of 7)"))
+grid.arrange(grobs = bar_charts[17:20], ncol = 2, 
+             top=textGrob("Bar Charts of Housing Variables (5 of 7)"))
+grid.arrange(grobs = bar_charts[21:24], ncol = 2, 
+             top=textGrob("Bar Charts of Housing Variables (6 of 7)"))
+grid.arrange(grobs = bar_charts[25:27], ncol = 2, 
+             top=textGrob("Bar Charts of Housing Variables (7 of 7)"))
+```
+
+```{r}
+## Histograms of continuous variables:
+
+data_con <- data[, !is_factor]
+
+generate_histograms <- function(df) {
+  plot_list <- vector('list', length(df))
+  name_list <- names(df)
+  
+  for (i in seq_along(df)) {
+    df.x <- df[[name_list[i]]]
+    plot_list[[i]] <- ggplot(data = df, aes(x = .data[[name_list[i]]])) + 
+      geom_histogram(color = "white", 
+                     binwidth = (max(df.x)-min(df.x))/ceiling(sqrt(length(df.x))))
+  }
+  return(plot_list)
+}
+
+histograms <- generate_histograms(data_con)
+
+grid.arrange(grobs = histograms[1:3], ncol = 1, 
+             top=textGrob("Histograms of Housing Variables"))
+```
+
+```{r}
+## Box plots:
+
+generate_box_plots <- function(df) {
+  plot_list <- vector('list', length(df))
+  name_list <- names(df)
+  
+  for (i in seq_along(df)) {
+    plot_list[[i]] <- ggplot(data = df, aes(y = .data[[name_list[i]]])) + 
+      geom_boxplot() + 
+      coord_cartesian(xlim = c(-1, 1)) + 
+      theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+  }
+  return(plot_list)
+}
+
+box_plots <- generate_box_plots(data_con)
+
+grid.arrange(grobs = box_plots[1:3], ncol = 3, 
+             top=textGrob("Box Plots of Housing Variables"))
+```
+
+```{r}
+## Q-Q plots:
+
+generate_qq_plots <- function(df) {
+  plot_list <- vector('list', length(df))
+  name_list <- names(df)
+  
+  for (i in seq_along(df)) {
+    plot_list[[i]] <- ggqqplot(data = df, x = name_list[i], title = name_list[i])
+  }
+  return(plot_list)
+}
+
+qq_plots <- generate_qq_plots(data_con)
+
+grid.arrange(grobs = qq_plots[1:2], ncol = 2, 
+             top=textGrob("Q-Q Plots of Housing Variables (1 of 2"))
+grid.arrange(grobs = qq_plots[3], ncol = 1, 
+             top=textGrob("Q-Q Plots of Housing Variables (2 of 2"))
+```
+
+```{r}
+## Factor analysis of mixed data:
+
+data_famd <- FAMD(data, ncp = 72, graph = FALSE)
+
+fviz_screeplot(data_famd, 
+	choice = "eigenvalue", 
+	ncp = 72)
+
+eig_kc <- data_famd$eig %>%
+	as.data.frame() %>%  
+	filter(eigenvalue > 1.0)
+eig_kc
+```
+
+### Analysis and Model Evaluation:
+
+```{r}
+
 ```
